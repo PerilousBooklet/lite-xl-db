@@ -1,1 +1,12 @@
-
+{
+  "addons": [
+    {
+      "id": "db",
+      "mod_version": "3",
+      "version": "0.0.1",
+      "description": "A simple and minimal database manager plgin for Lite XL.",
+      "path": ".",
+      "dependencies": {}
+    }
+  ]
+}

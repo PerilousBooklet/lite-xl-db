@@ -1,9 +1,15 @@
-- WIP: base TableView
+- FIX: queryconsoleview.lua: allow properly saving query as "filename"
 
+- TODO: queryconsoleview.lua: add logic to keep track and handle more than one query console + results view at once
+- TODO: tableview.lua: remove the gap between the rows' numbers column and the cells grid
+- TODO: tableview.lua: make cells resizable (including width of field title cells)
+- TODO: tableview.lua: add context menu with actions for editing cells/rows/columns
+
+## Da riordinare
 
 - TODO: modules: sqlite, postgres
 
-- TODO: write a small C API to interact with the db (look at the official plugin template)
+- FUTURE_TODO: write a small C API to interact with the db (look at the official plugin template)
 
 - TODO: debugger: make sure you can place a breakpoint on a line that returns a complex composite (assemebled with multipled 
         strings, ...) SQL query and ctrl+LMB click the query to be viewed separately
@@ -52,8 +58,9 @@
 
 - TODO: (use .lite_module.lua to store db connection config)
 - TODO: module system for connection types
-- TODO: store query console query text in text files hidden in lua table in project-specific hidden file
-  (es. `.lite_db.lua`, stody the workspaces plugin...)
+
+- TODO: store query consoles and their query history
+  (es. `lite-xl-db.lua`, like the workspaces plugin..., use same folder)
 
 - TODO: add DDL read-only DocView for selected table
   (look how intellij does it; show the SQL code that creates the table, for read-only DocView look at how scm does it)

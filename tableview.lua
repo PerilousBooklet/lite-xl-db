@@ -7,9 +7,6 @@ local View = require "core.view"
 
 local TableView = View:extend()
 
--- TODO: remove the gap between the rows' numbers column and the cells grid
-
--- WIP: refactor layout of config
 config.plugins.database_manager = common.merge({
   background_color      = style.background,
   header_color          = style.background2,
@@ -27,15 +24,10 @@ config.plugins.database_manager = common.merge({
 function TableView:new(columns, rows)
   TableView.super.new(self)
 
-  -- TODO: to remove
   -- `columns` is a list of column names: { "id", "name", "email" }
   -- `rows` is a list of rows, each row a list of cell values: { {1, "Alice", "a@x.com"}, ... }
-  self.columns = columns or { "id", "name", "value", "boh", "boh", "boh", "boh" }
-  self.rows = rows or {
-    { "1", "example_row", "42", "sdasdas", "sdasdas", "sdasdas", "sdasdas" },
-    { "2", "another_row", "7", "sdasdas", "sdasdas", "sdasdas", "sdasdas"  },
-    { "3", "third_row",   "99", "sdasdas", "sdasdas", "sdasdas", "sdasdas" }
-  }
+  self.columns = columns or {}
+  self.rows = rows or {}
 
   self.scrollable = true
   self.column_widths = {}
@@ -288,7 +280,7 @@ function TableView:draw_row_numbers(y)
     end
   end
 
-  -- Divider between the gutter and the scrollable columns
+  -- Divider line between the gutter and the scrollable columns
   renderer.draw_rect(gx + gw - math.ceil(SCALE), self.position.y + row_h, math.ceil(SCALE), math.max(self.size.y - row_h, 0), config.plugins.database_manager.grid_line_color)
 end
 
@@ -303,7 +295,7 @@ function TableView:draw_corner()
   local gw = self.row_number_width
 
   renderer.draw_rect(gx, gy, gw, row_h, config.plugins.database_manager.header_color)
-  common.draw_text(self.font, config.plugins.database_manager.header_text_color, "#", "center", gx, gy, gw, row_h)
+  common.draw_text(self.font, config.plugins.database_manager.header_text_color, "", "center", gx, gy, gw, row_h)
 
   renderer.draw_rect(gx, gy + row_h - math.ceil(SCALE), gw, math.ceil(SCALE), config.plugins.database_manager.grid_line_color)
   renderer.draw_rect(gx + gw - math.ceil(SCALE), gy, math.ceil(SCALE), row_h, config.plugins.database_manager.grid_line_color)
@@ -317,6 +309,7 @@ function TableView:draw()
   local ox, oy = self:get_content_offset()
   local row_h = self.row_height
   local gutter_w = self.row_number_width
+  -- FIX: remove excessive gap
   local x = ox + gutter_w + self.padding_x -- scrollable column content start
 
   -- Row numbers: fixed horizontally, scroll vertically with the rows.

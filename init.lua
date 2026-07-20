@@ -18,7 +18,17 @@ config.plugins.database_manager = common.merge({
   -- horizontal content yet. Set to math.huge (or nil-out the LIMIT
   -- clause in run_query below) if you don't want a cap.
   default_row_limit = 200,
+  -- Fraction of the origin node's height given to the result TableView
+  -- when it's split open beneath a query (see open_result_view below).
+  result_split_size = 0.35,
 }, config.plugins.database_manager)
+
+
+-- Public module table. Returned at the end of this file so that other
+-- files in the plugin (queryconsoleview.lua in particular) can
+-- `require "plugins.db"` and drive the same connection / query-running
+-- logic the commands below use, instead of duplicating it.
+local M = {}
 
 
 ---------------------------
@@ -41,26 +51,102 @@ local function require_connection()
   return active_connection
 end
 
+function M.get_active_connection()
+  return active_connection
+end
+
+function M.get_active_connection_label()
+  return active_connection_label
+end
+
+
+-- Recursively checks whether `target` is still somewhere in the node
+-- tree rooted at `node` -- used below to tell whether a node we saved
+-- a reference to earlier has since been closed by the user (e.g. by
+-- closing the last tab in it, which collapses/removes the node).
+local function node_exists(node, target)
+  if node == target then return true end
+  if node.type ~= "leaf" then
+    return node_exists(node.a, target) or node_exists(node.b, target)
+  end
+  return false
+end
+
+-- Remembers, per "origin" node (the node a query was run from), which
+-- node its results were last split into -- so re-running a query from
+-- the same console reuses that split instead of stacking a new one
+-- underneath every time. Keyed weakly so closed/GC'd nodes don't leak.
+local result_nodes = setmetatable({}, { __mode = "k" })
+
+-- Opens `view` (typically a TableView) in a tab underneath
+-- `origin_node` (the node a query was run from), splitting it open the
+-- first time and reusing that same split on subsequent runs from the
+-- same origin. Falls back to the current active node if origin_node
+-- is nil or no longer part of the tree (e.g. it was closed while the
+-- query was in flight).
+function M.open_result_view(view, origin_node)
+  local root_node = core.root_view.root_node
+  local existing = origin_node and result_nodes[origin_node]
+
+  if existing and node_exists(root_node, existing) then
+    existing:add_view(view)
+    return existing
+  end
+
+  local target = (origin_node and node_exists(root_node, origin_node))
+    and origin_node
+    or core.root_view:get_active_node()
+
+  local result_node = target:split("down", view, config.plugins.database_manager.result_split_size)
+  if origin_node then
+    result_nodes[origin_node] = result_node
+  end
+  return result_node
+end
+
 
 -- Runs `sql` against the active connection and opens the results in a
--- new TableView. Both backends expose the same :query_async(sql, cb)
--- shape, so this code doesn't need to know or care which one is active.
-local function run_query(sql)
+-- new TableView, split open beneath the node the query was run from.
+-- Both backends expose the same :query_async(sql, cb) shape, so this
+-- code doesn't need to know or care which one is active.
+--
+-- `on_done`, if given, is called exactly once as `on_done(err)` after
+-- the query finishes (err is nil on success). This exists so callers
+-- like queryconsoleview.lua can show inline status instead of relying
+-- solely on core.error/core.log.
+local function run_query(sql, on_done)
   local conn = require_connection()
-  if not conn then return end
+  if not conn then
+    if on_done then on_done("no active database connection") end
+    return
+  end
+
+  -- Captured now, synchronously, rather than inside the async
+  -- callback below: by the time the query finishes the user may have
+  -- switched tabs or split focus elsewhere, so "the active node/view"
+  -- at that point would no longer mean "the one the query came from".
+  local origin_node = core.root_view:get_active_node()
+  local origin_view = core.active_view
 
   core.log('Running query against %s...', active_connection_label)
   conn:query_async(sql, function(columns, rows, err)
     if err then
       core.error("Query failed: %s", err)
+      if on_done then on_done(err) end
       return
     end
-    local root_node = core.root_view:get_active_node()
     local db_view = TableView(columns, rows)
-    root_node:add_view(db_view)
+    M.open_result_view(db_view, origin_node)
+    -- Keep focus on the query editor/console rather than the new
+    -- result tab, so you can immediately tweak and re-run the query.
+    if origin_view then
+      core.set_active_view(origin_view)
+    end
     core.log("Query returned %d row(s)", #rows)
+    if on_done then on_done(nil) end
   end)
 end
+M.run_query = run_query
 
 
 --------------
@@ -131,7 +217,6 @@ command.add(nil, {
     if not require_connection() then return end
     core.command_view:enter("SQL Query", {
       submit = function(sql)
-        print(sql)
         run_query(sql)
       end,
     })
@@ -155,6 +240,18 @@ command.add(nil, {
       end,
     })
   end,
+
+  -- Opens a scratch SQL editor (queryconsoleview.lua) in a new tab.
+  -- Required lazily, rather than at the top of this file, to avoid a
+  -- circular require: queryconsoleview.lua itself does
+  -- `require "plugins.db"` to call back into M.run_query.
+  ["db:open-query-console"] = function()
+    local QueryConsoleView = require "plugins.db.queryconsoleview"
+    local view = QueryConsoleView(M)
+    local root_node = core.root_view:get_active_node()
+    root_node:add_view(view)
+    core.set_active_view(view)
+  end,
 })
 
 
@@ -164,6 +261,7 @@ command.add(nil, {
 
 keymap.add({
   ["alt+z"] = "db:open-table",
+  ["alt+shift+q"] = "db:open-query-console",
 })
 
 
@@ -173,3 +271,5 @@ keymap.add({
 -- Nothing else to do at load time: connections are created lazily by
 -- db:connect-sqlite / db:connect-postgres, and TableViews are only
 -- opened once a query actually runs.
+
+return M

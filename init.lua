@@ -11,6 +11,29 @@ local PostgresConnection = require "plugins.db.backends.postgres"
 
 local TableView = require "plugins.db.tableview"
 
+-- TODO: add message (logs or right-side treeview ?) for when the current project db connection is not configured
+-- TODO: add command to refresh a db connection (with fuzzy suggest to list connections and commandview to choose one)
+-- TODO: store info about current connections in lua table in text file
+-- TODO: add possibility of connecting to more than one db at the same time
+--       (and showing data from both at the same time, in separate views)
+
+-- TODO: le run delle query NON devono essere blocking (come faccio ?)
+
+-- TODO: add treeview to show all tables; clicking on row item opens that table
+-- TODO: 
+
+-- TODO: add boolean variable (`is_prod = true/false`) to indicate if db treeview should be colored as RED
+--       (look how intellij does it)
+--       (instead of no custom color)
+--       (add custom colors ?)
+
+-- TODO: `db` and `lsp_sql` (with `sqls`) must share the DB connection details, maybe with `.lite_project.lua`
+-- TODO: debugger integration: make sure you can place a breakpoint on a line that returns a complex composite
+--       (assembled with multipled strings, ...) SQL query and ctrl+LMB click the query to be viewed separately
+
+-- FUTURE_TODO: write a small C API to interact with the db (look at the official plugin template)
+-- FUTURE_TODO: update messageview layout structure following Guldoman's Pockets PR
+
 config.plugins.database_manager = common.merge({
   background_color  = style.background,
   -- Safety net for "db:open-table": avoids accidentally pulling
@@ -238,6 +261,10 @@ command.add(nil, {
         end
         run_query(sql)
       end,
+      -- WIP: add table name suggestions to `db:open-table`
+      suggest = function()
+        -- ?
+      end
     })
   end,
 

@@ -7,6 +7,15 @@ local View = require "core.view"
 
 local TableView = View:extend()
 
+-- TODO: make cells resizable (including width of field title cells)
+-- TODO: add context menu with actions for editing cells/rows/columns
+
+-- TODO: bulk-edit of a table's rows
+--       (es. copy a vertical/horizontal selection of cells, then paste it into another table)
+
+-- TODO: add DDL read-only DocView for selected table
+--       (look how intellij does it; show the SQL code that creates the table, for read-only DocView look at how scm does it)
+
 config.plugins.database_manager = common.merge({
   background_color      = style.background,
   header_color          = style.background2,
@@ -309,8 +318,7 @@ function TableView:draw()
   local ox, oy = self:get_content_offset()
   local row_h = self.row_height
   local gutter_w = self.row_number_width
-  -- FIX: remove excessive gap
-  local x = ox + gutter_w + self.padding_x -- scrollable column content start
+  local x = ox + gutter_w -- scrollable column content start
 
   -- Row numbers: fixed horizontally, scroll vertically with the rows.
   -- Clipped to the area below the header, same reasoning as the rows.

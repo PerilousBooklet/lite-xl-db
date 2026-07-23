@@ -21,6 +21,11 @@ local DocView = require "core.docview"
 -- methods, then restoring them -- see with_content_area() below.
 local QueryConsoleView = DocView:extend()
 
+-- FIX: allow properly saving query as "filename"
+
+-- TODO: add logic to keep track and handle more than one query console + results view at once
+-- TODO: store query consoles and their query history
+
 config.plugins.database_manager = common.merge({
   topbar_background      = style.background2,
   topbar_text_color       = style.text,
@@ -32,7 +37,6 @@ config.plugins.database_manager = common.merge({
   status_error_color      = { common.color "#fb4934" },
   status_info_color       = style.dim,
 }, config.plugins.database_manager)
-
 
 local function doc_get_all_text(doc)
   local last_line = #doc.lines
